@@ -5,39 +5,140 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/parser"
 	"go/token"
+	"strings"
 
 	"github.com/shurcooL/go/parserutil"
 )
 
-// GoToEnglish returns the English representation for Go code.
-func GoToEnglish(code string) (string, error) {
-	decl, err := parserutil.ParseDecl(code)
-	if err != nil {
-		return "", err
+// GoToEnglish returns the English representation for a fragment of Go code.
+func GoToEnglish(frag string) (string, error) {
+	var errors []string
+	if expr, err := parser.ParseExpr(frag); err == nil {
+		return exprString(expr), nil
+	} else {
+		errors = append(errors, err.Error())
 	}
-	return DeclString(decl), nil
+	if decl, err := parserutil.ParseDecl(frag); err == nil {
+		return declString(decl), nil
+	} else {
+		errors = append(errors, err.Error())
+	}
+	if stmt, err := parserutil.ParseStmt(frag); err == nil {
+		return stmtString(stmt), nil
+	} else {
+		errors = append(errors, err.Error())
+	}
+	return "", fmt.Errorf("failed to parse fragment of Go code:\n%v", strings.Join(errors, "\n"))
 }
 
-// DeclString returns the (possibly simplified) string representation for x.
-func DeclString(x ast.Decl) string {
+// stmtString returns the (possibly simplified) English representation for x.
+func stmtString(x ast.Stmt) string {
 	var buf bytes.Buffer
-	WriteDecl(&buf, x)
+	writeStmt(&buf, x)
 	return buf.String()
 }
 
-// WriteDecl writes the (possibly simplified) string representation for x to buf.
-func WriteDecl(buf *bytes.Buffer, x ast.Decl) {
+// declString returns the (possibly simplified) English representation for x.
+func declString(x ast.Decl) string {
+	var buf bytes.Buffer
+	writeDecl(&buf, x)
+	return buf.String()
+}
+
+// exprString returns the (possibly simplified) English representation for x.
+func exprString(x ast.Expr) string {
+	var buf bytes.Buffer
+	writeExpr(&buf, x)
+	return buf.String()
+}
+
+// writeStmt writes the (possibly simplified) English representation for x to buf.
+func writeStmt(buf *bytes.Buffer, x ast.Stmt) {
+	switch x := x.(type) {
+	default:
+		fmt.Fprintf(buf, "<TODO: %T>", x)
+
+	case *ast.DeclStmt:
+		writeDecl(buf, x.Decl)
+
+	case *ast.ExprStmt:
+		writeExpr(buf, x.X)
+
+	case *ast.AssignStmt:
+		switch x.Tok {
+		case token.DEFINE:
+			buf.WriteString("short declare variable")
+			if len(x.Lhs) > 1 {
+				buf.WriteByte('s') // Plural.
+			}
+			buf.WriteByte(' ')
+			for i, e := range x.Lhs {
+				if i > 0 {
+					buf.WriteString(" and ")
+				}
+				writeExpr(buf, e)
+			}
+			switch len(x.Rhs) {
+			case 0: // Do nothing.
+			case 1:
+				buf.WriteString(" with initial value ")
+			default:
+				buf.WriteString(" with initial values ")
+			}
+			for i, e := range x.Rhs {
+				if i > 0 {
+					buf.WriteString(" and ")
+				}
+				writeExpr(buf, e)
+			}
+		case token.ASSIGN:
+			buf.WriteString("assign to ")
+			for i, e := range x.Lhs {
+				if i > 0 {
+					buf.WriteString(" and ")
+				}
+				writeExpr(buf, e)
+			}
+			switch len(x.Rhs) {
+			case 0: // Do nothing.
+			case 1:
+				buf.WriteString(" the value ")
+			default:
+				buf.WriteString(" the values ")
+			}
+			for i, e := range x.Rhs {
+				if i > 0 {
+					buf.WriteString(" and ")
+				}
+				writeExpr(buf, e)
+			}
+		default:
+			fmt.Fprintf(buf, "<TODO: '%v'>", x.Tok)
+		}
+	}
+}
+
+// writeDecl writes the (possibly simplified) English representation for x to buf.
+func writeDecl(buf *bytes.Buffer, x ast.Decl) {
 	switch x := x.(type) {
 	default:
 		fmt.Fprintf(buf, "<TODO: %T>", x)
 
 	case *ast.GenDecl:
-		buf.WriteString("declare ")
-		for i, s := range x.Specs {
-			if i > 0 {
-				buf.WriteString(", ")
+		switch x.Tok {
+		default:
+			buf.WriteString("declare ")
+		case token.IMPORT:
+			buf.WriteString("import package")
+			if len(x.Specs) > 1 {
+				buf.WriteByte('s') // Plural.
 			}
+			buf.WriteByte(' ')
+		}
+		for i, s := range x.Specs {
+			writeSep(buf, i, len(x.Specs))
 			switch x.Tok {
 			case token.VAR:
 				buf.WriteString("variable")
@@ -45,18 +146,41 @@ func WriteDecl(buf *bytes.Buffer, x ast.Decl) {
 				buf.WriteString("constant")
 			case token.TYPE:
 				buf.WriteString("type")
+			case token.IMPORT:
+				// Do nothing.
 			default:
-				fmt.Fprintf(buf, "<TODO: %T>", x.Tok)
+				fmt.Fprintf(buf, "<unexpected *ast.GenDecl.Tok: '%v'>", x.Tok)
 			}
 			if isValueSpecPlural(s) {
-				buf.WriteString("s") // Plural.
+				buf.WriteByte('s') // Plural.
 			}
-			buf.WriteString(" ")
-			WriteSpec(buf, s)
+			if x.Tok != token.IMPORT {
+				buf.WriteByte(' ')
+			}
+			writeSpec(buf, s)
 		}
+	case *ast.FuncDecl:
+		buf.WriteString("function ")
+		buf.WriteString(x.Name.Name)
+		if x.Type.Params.NumFields() > 0 || x.Type.Results.NumFields() > 0 {
+			buf.WriteByte(' ')
+		}
+		writeSigExpr(buf, x.Type)
 	}
 }
 
+// writeSep writes a separator that comes before entry i out of total.
+// It creates English phrases like "first, second, third, forth and fifth".
+func writeSep(buf *bytes.Buffer, i int, total int) {
+	switch {
+	case i > 0 && i < total-1:
+		buf.WriteString(", ")
+	case i > 0 && i == total-1:
+		buf.WriteString(" and ")
+	}
+}
+
+// isValueSpecPlural reports whether spec x is a value spec containing multiple names.
 func isValueSpecPlural(x ast.Spec) bool {
 	v, ok := x.(*ast.ValueSpec)
 	if !ok {
@@ -65,12 +189,9 @@ func isValueSpecPlural(x ast.Spec) bool {
 	return len(v.Names) > 1
 }
 
-// WriteSpec writes the (possibly simplified) string representation for x to buf.
-func WriteSpec(buf *bytes.Buffer, x ast.Spec) {
+// writeSpec writes the (possibly simplified) English representation for x to buf.
+func writeSpec(buf *bytes.Buffer, x ast.Spec) {
 	switch x := x.(type) {
-	default:
-		fmt.Fprintf(buf, "<TODO: %T>", x)
-
 	case *ast.ValueSpec:
 		for i, n := range x.Names {
 			if i > 0 {
@@ -81,15 +202,11 @@ func WriteSpec(buf *bytes.Buffer, x ast.Spec) {
 
 		if x.Type != nil {
 			buf.WriteString(" as ")
-			WriteExpr(buf, x.Type)
-			//if len(x.Names) > 1 {
-			//	buf.WriteString("s") // Plural.
-			//}
+			writeExpr(buf, x.Type)
 		}
 
 		switch len(x.Values) {
-		case 0:
-			// Do nothing.
+		case 0: // Do nothing.
 		case 1:
 			buf.WriteString(" with initial value ")
 		default:
@@ -99,17 +216,33 @@ func WriteSpec(buf *bytes.Buffer, x ast.Spec) {
 			if i > 0 {
 				buf.WriteString(" and ")
 			}
-			WriteExpr(buf, v)
+			writeExpr(buf, v)
 		}
 	case *ast.TypeSpec:
 		buf.WriteString(x.Name.Name)
 		buf.WriteString(" as ")
-		WriteExpr(buf, x.Type)
+		writeExpr(buf, x.Type)
+
+	case *ast.ImportSpec:
+		buf.WriteString(x.Path.Value)
+		if x.Name == nil {
+			break
+		}
+		switch x.Name.Name {
+		default:
+			buf.WriteString(" as ")
+			buf.WriteString(x.Name.Name)
+		case "_":
+			buf.WriteString(" for side-effects")
+		}
+
+	default:
+		fmt.Fprintf(buf, "<unexpected ast.Spec: %T>", x)
 	}
 }
 
-// WriteExpr writes the (possibly simplified) string representation for x to buf.
-func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
+// writeExpr writes the (possibly simplified) English representation for x to buf.
+func writeExpr(buf *bytes.Buffer, x ast.Expr) {
 	// The AST preserves source-level parentheses so there is
 	// no need to introduce them here to correct for different
 	// operator precedences. (This assumes that the AST was
@@ -125,7 +258,7 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 	case *ast.Ellipsis:
 		buf.WriteString("...")
 		if x.Elt != nil {
-			WriteExpr(buf, x.Elt)
+			writeExpr(buf, x.Elt)
 		}
 
 	case *ast.BasicLit:
@@ -133,62 +266,62 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 
 	case *ast.FuncLit:
 		buf.WriteByte('(')
-		WriteExpr(buf, x.Type)
+		writeExpr(buf, x.Type)
 		buf.WriteString(" literal)") // simplified
 
 	case *ast.CompositeLit:
 		buf.WriteByte('(')
-		WriteExpr(buf, x.Type)
+		writeExpr(buf, x.Type)
 		buf.WriteString(" literal)") // simplified
 
 	case *ast.ParenExpr:
 		buf.WriteByte('(')
-		WriteExpr(buf, x.X)
+		writeExpr(buf, x.X)
 		buf.WriteByte(')')
 
 	case *ast.SelectorExpr:
-		WriteExpr(buf, x.X)
+		writeExpr(buf, x.X)
 		buf.WriteByte('.')
 		buf.WriteString(x.Sel.Name)
 
 	case *ast.IndexExpr:
-		WriteExpr(buf, x.X)
+		writeExpr(buf, x.X)
 		buf.WriteByte('[')
-		WriteExpr(buf, x.Index)
+		writeExpr(buf, x.Index)
 		buf.WriteByte(']')
 
 	case *ast.SliceExpr:
-		WriteExpr(buf, x.X)
+		writeExpr(buf, x.X)
 		buf.WriteByte('[')
 		if x.Low != nil {
-			WriteExpr(buf, x.Low)
+			writeExpr(buf, x.Low)
 		}
 		buf.WriteByte(':')
 		if x.High != nil {
-			WriteExpr(buf, x.High)
+			writeExpr(buf, x.High)
 		}
 		if x.Slice3 {
 			buf.WriteByte(':')
 			if x.Max != nil {
-				WriteExpr(buf, x.Max)
+				writeExpr(buf, x.Max)
 			}
 		}
 		buf.WriteByte(']')
 
 	case *ast.TypeAssertExpr:
-		WriteExpr(buf, x.X)
+		writeExpr(buf, x.X)
 		buf.WriteString(".(")
-		WriteExpr(buf, x.Type)
+		writeExpr(buf, x.Type)
 		buf.WriteByte(')')
 
 	case *ast.CallExpr:
-		WriteExpr(buf, x.Fun)
+		writeExpr(buf, x.Fun)
 		buf.WriteByte('(')
 		for i, arg := range x.Args {
 			if i > 0 {
 				buf.WriteString(", ")
 			}
-			WriteExpr(buf, arg)
+			writeExpr(buf, arg)
 		}
 		if x.Ellipsis.IsValid() {
 			buf.WriteString("...")
@@ -197,14 +330,14 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 
 	case *ast.StarExpr:
 		buf.WriteString("pointer to ")
-		WriteExpr(buf, x.X)
+		writeExpr(buf, x.X)
 
 	case *ast.UnaryExpr:
 		buf.WriteString(x.Op.String())
-		WriteExpr(buf, x.X)
+		writeExpr(buf, x.X)
 
 	case *ast.BinaryExpr:
-		WriteExpr(buf, x.X)
+		writeExpr(buf, x.X)
 		buf.WriteByte(' ')
 		switch x.Op {
 		default:
@@ -217,17 +350,17 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 			buf.WriteString("divided by")
 		}
 		buf.WriteByte(' ')
-		WriteExpr(buf, x.Y)
+		writeExpr(buf, x.Y)
 
 	case *ast.ArrayType:
 		if x.Len == nil {
 			buf.WriteString("slice of ")
 		} else {
 			buf.WriteString("array ")
-			WriteExpr(buf, x.Len)
+			writeExpr(buf, x.Len)
 			buf.WriteString(" of ")
 		}
-		WriteExpr(buf, x.Elt)
+		writeExpr(buf, x.Elt)
 
 	case *ast.StructType:
 		buf.WriteString("struct{")
@@ -235,7 +368,10 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 		buf.WriteByte('}')
 
 	case *ast.FuncType:
-		buf.WriteString("function ")
+		buf.WriteString("function")
+		if x.Params.NumFields() > 0 || x.Results.NumFields() > 0 {
+			buf.WriteByte(' ')
+		}
 		writeSigExpr(buf, x)
 
 	case *ast.InterfaceType:
@@ -245,9 +381,9 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 
 	case *ast.MapType:
 		buf.WriteString("map of ")
-		WriteExpr(buf, x.Key)
+		writeExpr(buf, x.Key)
 		buf.WriteString(" to ")
-		WriteExpr(buf, x.Value)
+		writeExpr(buf, x.Value)
 
 	case *ast.ChanType:
 		var s string
@@ -260,7 +396,7 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 			s = "chan "
 		}
 		buf.WriteString(s)
-		WriteExpr(buf, x.Value)
+		writeExpr(buf, x.Value)
 	}
 }
 
@@ -284,7 +420,7 @@ func writeFieldList(buf *bytes.Buffer, fields *ast.FieldList, sep string, iface 
 			buf.WriteString(sep)
 		}
 
-		// field list names
+		// Field list names.
 		for i, name := range f.Names {
 			if i > 0 {
 				buf.WriteString(", ")
@@ -292,19 +428,19 @@ func writeFieldList(buf *bytes.Buffer, fields *ast.FieldList, sep string, iface 
 			buf.WriteString(name.Name)
 		}
 
-		// types of interface methods consist of signatures only
+		// Types of interface methods consist of signatures only.
 		if sig, _ := f.Type.(*ast.FuncType); sig != nil && iface {
 			writeSigExpr(buf, sig)
 			continue
 		}
 
-		// named fields are separated with a blank from the field type
+		// Named fields are separated with a blank from the field type.
 		if len(f.Names) > 0 {
 			buf.WriteByte(' ')
 		}
 
-		WriteExpr(buf, f.Type)
+		writeExpr(buf, f.Type)
 
-		// ignore tag
+		// Ignore tag.
 	}
 }

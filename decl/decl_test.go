@@ -37,11 +37,75 @@ func TestGoToEnglish(t *testing.T) {
 		},
 		{
 			"var (x int; y string)",
-			"declare variable x as int, variable y as string",
+			"declare variable x as int and variable y as string",
 		},
 		{
 			"var (x, y int; a, b string)",
-			"declare variables x and y as int, variables a and b as string",
+			"declare variables x and y as int and variables a and b as string",
+		},
+		{
+			"x := 1",
+			"short declare variable x with initial value 1",
+		},
+		{
+			"x, y := 1, 2",
+			"short declare variables x and y with initial values 1 and 2",
+		},
+
+		{
+			"*[]map[int]string",
+			"pointer to slice of map of int to string",
+		},
+		{
+			"**[][]*map[int32][][3]string",
+			"pointer to pointer to slice of slice of pointer to map of int32 to slice of array 3 of string",
+		},
+		{
+			"func(string, bool) (int, error)",
+			"function taking string and bool and returning int and error",
+		},
+		{
+			"var x, y int = (2+5) / 3, 4",
+			"declare variables x and y as int with initial values (2 plus 5) divided by 3 and 4",
+		},
+		{
+			"var x func() *[5]*func() rune",
+			"declare variable x as function returning pointer to array 5 of pointer to function returning rune",
+		},
+
+		{
+			"i = 5",
+			"assign to i the value 5",
+		},
+		{
+			"i, j = 5, 6",
+			"assign to i and j the values 5 and 6",
+		},
+
+		{
+			`import "fmt"`,
+			`import package "fmt"`,
+		},
+		{
+			`import myfmt "fmt"`,
+			`import package "fmt" as myfmt`,
+		},
+		{
+			`import ("fmt"; "net/http"; _ "image/png")`,
+			`import packages "fmt", "net/http" and "image/png" for side-effects`,
+		},
+
+		{
+			"func Foo()",
+			"function Foo",
+		},
+		{
+			"func Foo() {}",
+			"function Foo",
+		},
+		{
+			"func Foo(x int) string",
+			"function Foo taking x int and returning string",
 		},
 	}
 	for _, tc := range tests {
@@ -51,7 +115,7 @@ func TestGoToEnglish(t *testing.T) {
 			continue
 		}
 		if got != tc.want {
-			t.Errorf("got: %q, want: %q", got, tc.want)
+			t.Errorf("\ngot:  %q\nwant: %q\n", got, tc.want)
 		}
 	}
 }
