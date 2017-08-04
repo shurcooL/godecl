@@ -56,24 +56,24 @@ func WriteDecl(buf *bytes.Buffer, x ast.Decl) {
 
 	case *ast.GenDecl:
 		buf.WriteString("declare ")
-		switch x.Tok {
-		case token.VAR:
-			buf.WriteString("variable")
-		case token.CONST:
-			buf.WriteString("constant")
-		case token.TYPE:
-			buf.WriteString("type")
-		default:
-			fmt.Fprintf(buf, "<TODO: %T>", x.Tok)
-		}
-		if len(x.Specs) > 0 && isValueSpecPlural(x.Specs[0]) {
-			buf.WriteString("s") // Plural.
-		}
-		buf.WriteString(" ")
 		for i, s := range x.Specs {
 			if i > 0 {
-				buf.WriteString(" and ")
+				buf.WriteString(", ")
 			}
+			switch x.Tok {
+			case token.VAR:
+				buf.WriteString("variable")
+			case token.CONST:
+				buf.WriteString("constant")
+			case token.TYPE:
+				buf.WriteString("type")
+			default:
+				fmt.Fprintf(buf, "<TODO: %T>", x.Tok)
+			}
+			if isValueSpecPlural(s) {
+				buf.WriteString("s") // Plural.
+			}
+			buf.WriteString(" ")
 			WriteSpec(buf, s)
 		}
 	}
