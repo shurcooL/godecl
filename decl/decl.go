@@ -66,6 +66,9 @@ func writeStmt(buf *bytes.Buffer, x ast.Stmt) {
 	default:
 		fmt.Fprintf(buf, "<TODO: %T>", x)
 
+	case *ast.EmptyStmt:
+		// Do nothing.
+
 	case *ast.DeclStmt:
 		writeDecl(buf, x.Decl)
 

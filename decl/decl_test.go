@@ -16,6 +16,10 @@ func TestGoToEnglish(t *testing.T) {
 		want string
 	}{
 		{
+			"",
+			"",
+		},
+		{
 			"var x int",
 			"declare variable x as int",
 		},
