@@ -3,6 +3,7 @@
 		<style type="text/css">
 body {
 	font-family: sans-serif;
+	margin: 20px;
 }
 
 .pt8 { padding-top: 8px; }
@@ -10,7 +11,7 @@ body {
 
 #input {
 	font-size: x-large;
-	width: 600px;
+	width: 800px;
 }
 #output {
 	padding-top: 24px;
@@ -18,15 +19,19 @@ body {
 }
 		</style>
 	</head>
-	<body>
+	<body><div style="max-width: 800px; margin: 0 auto 100px auto;">
 		<h1>godecl</h1>
 
-		<p>Go syntax ↔ English</p>
+		<p>Go syntax → English</p>
 
-		<input id="input" autofocus value="*[]map[int]string"></input>
+		<!--input id="input" autofocus value="*[]map[int]string"></input-->
+		<!--input id="input" autofocus value="func(string, bool) (int, error)"></input-->
+		<!--input id="input" autofocus value="var x, y int = (2+5) / 3, 4"></input-->
+		<!--input id="input" autofocus value="var x func() *[5]*func() rune"></input-->
+		<input id="input" autofocus value="var x, y int = 1, 2"></input>
 
 		<div id="output">Loading...</div>
 
 		<script type="text/javascript" src="godecl.js"></script>
-	</body>
+	</div></body>
 </html>

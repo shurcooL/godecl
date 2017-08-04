@@ -1,13 +1,16 @@
+// A godecl experiment.
+//
+// Inspired by @bradfitz at https://twitter.com/bradfitz/status/833048466456600576.
 package main
 
 import (
 	"bytes"
 	"fmt"
 	"go/ast"
-	"go/parser"
+	"go/token"
 
 	"github.com/shurcooL/go/parserutil"
-	"github.com/shurcooL/go/printerutil"
+
 	"honnef.co/go/js/dom"
 )
 
@@ -22,28 +25,7 @@ func main() {
 }
 
 func run() {
-	/*out, err := run2(input.Value)
-	if err != nil {
-		output.SetTextContent("error: " + err.Error())
-		return
-	}
-	output.SetTextContent(out)
-
-	out, err = run3(input.Value)
-	if err != nil {
-		output.SetTextContent("error: " + err.Error())
-		return
-	}
-	output.SetTextContent(output.TextContent() + "\n" + out)
-
-	out, err := run4(input.Value)
-	if err != nil {
-		output.SetTextContent("error: " + err.Error())
-		return
-	}
-	output.SetTextContent(output.TextContent() + "\n" + out)*/
-
-	out, err := run4(input.Value)
+	out, err := GoToEnglish(input.Value)
 	if err != nil {
 		output.SetTextContent("error: " + err.Error())
 		return
@@ -51,63 +33,101 @@ func run() {
 	output.SetTextContent(out)
 }
 
-func run2(s string) (string, error) {
-	decl, err := parserutil.ParseDecl(s)
-	if err != nil {
-		return "", err
-	}
-	var buf bytes.Buffer
-	err = ast.Fprint(&buf, nil, decl, ast.NotNilFilter)
-	if err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
-func run3(x string) (string, error) {
+func GoToEnglish(x string) (string, error) {
 	decl, err := parserutil.ParseDecl(x)
 	if err != nil {
 		return "", err
 	}
-	var s string
-	ast.Inspect(decl, func(n ast.Node) bool {
-		if n != nil {
-			s += fmt.Sprintf("%T: %v\n", n, printerutil.SprintAstBare(n))
-		}
-		return true
-	})
-	return s, nil
+	return DeclString(decl), nil
 }
 
-func run4(x string) (string, error) {
-	expr, err := parser.ParseExpr(x)
-	if err != nil {
-		return "", err
-	}
-	return ExprString(expr), nil
-}
-
-/*var typeString func(t map[string]interface{}) string
-typeString = func(t map[string]interface{}) string {
-	switch t["kind"] {
-	case "NON_NULL":
-		s := typeString(t["ofType"].(map[string]interface{}))
-		if !strings.HasPrefix(s, "*") {
-			panic(fmt.Errorf("nullable type %q doesn't begin with '*'", s))
-		}
-		return s[1:] // Strip star from nullable type to make it non-null.
-	case "LIST":
-		return "*[]" + typeString(t["ofType"].(map[string]interface{}))
-	default:
-		return "*" + t["name"].(string)
-	}
-}*/
-
-// ExprString returns the (possibly simplified) string representation for x.
-func ExprString(x ast.Expr) string {
+// DeclString returns the (possibly simplified) string representation for x.
+func DeclString(x ast.Decl) string {
 	var buf bytes.Buffer
-	WriteExpr(&buf, x)
+	WriteDecl(&buf, x)
 	return buf.String()
+}
+
+// WriteDecl writes the (possibly simplified) string representation for x to buf.
+func WriteDecl(buf *bytes.Buffer, x ast.Decl) {
+	switch x := x.(type) {
+	default:
+		fmt.Fprintf(buf, "<TODO: %T>", x)
+
+	case *ast.GenDecl:
+		buf.WriteString("declare ")
+		switch x.Tok {
+		case token.VAR:
+			buf.WriteString("variable")
+		case token.CONST:
+			buf.WriteString("constant")
+		case token.TYPE:
+			buf.WriteString("type")
+		default:
+			fmt.Fprintf(buf, "<TODO: %T>", x.Tok)
+		}
+		if len(x.Specs) > 0 && isValueSpecPlural(x.Specs[0]) {
+			buf.WriteString("s") // Plural.
+		}
+		buf.WriteString(" ")
+		for i, s := range x.Specs {
+			if i > 0 {
+				buf.WriteString(" and ")
+			}
+			WriteSpec(buf, s)
+		}
+	}
+}
+
+func isValueSpecPlural(x ast.Spec) bool {
+	v, ok := x.(*ast.ValueSpec)
+	if !ok {
+		return false
+	}
+	return len(v.Names) > 1
+}
+
+// WriteSpec writes the (possibly simplified) string representation for x to buf.
+func WriteSpec(buf *bytes.Buffer, x ast.Spec) {
+	switch x := x.(type) {
+	default:
+		fmt.Fprintf(buf, "<TODO: %T>", x)
+
+	case *ast.ValueSpec:
+		for i, n := range x.Names {
+			if i > 0 {
+				buf.WriteString(" and ")
+			}
+			buf.WriteString(n.Name)
+		}
+
+		if x.Type != nil {
+			buf.WriteString(" as ")
+			WriteExpr(buf, x.Type)
+			//if len(x.Names) > 1 {
+			//	buf.WriteString("s") // Plural.
+			//}
+		}
+
+		switch len(x.Values) {
+		case 0:
+			// Do nothing.
+		case 1:
+			buf.WriteString(" with initial value ")
+		default:
+			buf.WriteString(" with initial values ")
+		}
+		for i, v := range x.Values {
+			if i > 0 {
+				buf.WriteString(" and ")
+			}
+			WriteExpr(buf, v)
+		}
+	case *ast.TypeSpec:
+		buf.WriteString(x.Name.Name)
+		buf.WriteString(" as ")
+		WriteExpr(buf, x.Type)
+	}
 }
 
 // WriteExpr writes the (possibly simplified) string representation for x to buf.
@@ -208,7 +228,16 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 	case *ast.BinaryExpr:
 		WriteExpr(buf, x.X)
 		buf.WriteByte(' ')
-		buf.WriteString(x.Op.String())
+		switch x.Op {
+		default:
+			buf.WriteString(x.Op.String())
+		case token.ADD:
+			buf.WriteString("plus")
+		case token.SUB:
+			buf.WriteString("minus")
+		case token.QUO:
+			buf.WriteString("divided by")
+		}
 		buf.WriteByte(' ')
 		WriteExpr(buf, x.Y)
 
@@ -228,7 +257,7 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 		buf.WriteByte('}')
 
 	case *ast.FuncType:
-		buf.WriteString("func")
+		buf.WriteString("function ")
 		writeSigExpr(buf, x)
 
 	case *ast.InterfaceType:
@@ -258,28 +287,17 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 }
 
 func writeSigExpr(buf *bytes.Buffer, sig *ast.FuncType) {
-	buf.WriteByte('(')
-	writeFieldList(buf, sig.Params, ", ", false)
-	buf.WriteByte(')')
-
-	res := sig.Results
-	n := res.NumFields()
-	if n == 0 {
-		// no result
-		return
+	if sig.Params.NumFields() > 0 {
+		buf.WriteString("taking ")
+		writeFieldList(buf, sig.Params, " and ", false)
 	}
-
-	buf.WriteByte(' ')
-	if n == 1 && len(res.List[0].Names) == 0 {
-		// single unnamed result
-		WriteExpr(buf, res.List[0].Type)
-		return
+	if sig.Params.NumFields() > 0 && sig.Results.NumFields() > 0 {
+		buf.WriteString(" and ")
 	}
-
-	// multiple or named result(s)
-	buf.WriteByte('(')
-	writeFieldList(buf, res, ", ", false)
-	buf.WriteByte(')')
+	if sig.Results.NumFields() > 0 {
+		buf.WriteString("returning ")
+		writeFieldList(buf, sig.Results, " and ", false)
+	}
 }
 
 func writeFieldList(buf *bytes.Buffer, fields *ast.FieldList, sep string, iface bool) {
