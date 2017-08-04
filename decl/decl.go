@@ -1,4 +1,9 @@
-// Package decl ...
+// Copyright 2017 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package decl implements functionality to convert
+// fragments of Go code to an English representation.
 package decl
 
 import (
@@ -12,23 +17,24 @@ import (
 	"github.com/shurcooL/go/parserutil"
 )
 
-// GoToEnglish returns the English representation for a fragment of Go code.
-func GoToEnglish(frag string) (string, error) {
+// GoToEnglish returns a (possibly simplified) English representation
+// for the fragment of Go code.
+func GoToEnglish(frag string) (english string, err error) {
 	var errors []string
 	if expr, err := parser.ParseExpr(frag); err == nil {
 		return exprString(expr), nil
 	} else {
-		errors = append(errors, err.Error())
+		errors = append(errors, "as an expression: "+err.Error())
 	}
 	if decl, err := parserutil.ParseDecl(frag); err == nil {
 		return declString(decl), nil
 	} else {
-		errors = append(errors, err.Error())
+		errors = append(errors, "as a declaration: "+err.Error())
 	}
 	if stmt, err := parserutil.ParseStmt(frag); err == nil {
 		return stmtString(stmt), nil
 	} else {
-		errors = append(errors, err.Error())
+		errors = append(errors, "as a statement: "+err.Error())
 	}
 	return "", fmt.Errorf("failed to parse fragment of Go code:\n%v", strings.Join(errors, "\n"))
 }

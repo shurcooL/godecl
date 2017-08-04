@@ -1,9 +1,13 @@
+// Copyright 2017 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package decl_test
 
 import (
 	"testing"
 
-	"github.com/shurcooL/play/228/godecl/decl"
+	"github.com/shurcooL/godecl/decl"
 )
 
 func TestGoToEnglish(t *testing.T) {

@@ -1,3 +1,7 @@
+// Copyright 2017 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // A godecl experiment. Like cdecl, but for Go.
 //
 // Inspired by @bradfitz at https://twitter.com/bradfitz/status/833048466456600576.
@@ -8,7 +12,7 @@ import (
 	"os"
 
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/shurcooL/play/228/godecl/decl"
+	"github.com/shurcooL/godecl/decl"
 	"honnef.co/go/js/dom"
 )
 
