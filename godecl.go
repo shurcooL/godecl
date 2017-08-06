@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/shurcooL/godecl/decl"
@@ -26,32 +27,78 @@ where the DOM is not available. You'll need to run it inside a browser.`)
 
 	document := dom.GetWindow().Document()
 	c := context{
-		input:  document.GetElementByID("input").(*dom.HTMLInputElement),
-		output: document.GetElementByID("output").(*dom.HTMLDivElement),
-		issue:  document.GetElementByID("issue").(*dom.HTMLAnchorElement),
+		input:     document.GetElementByID("input").(*dom.HTMLInputElement),
+		output:    document.GetElementByID("output").(*dom.HTMLDivElement),
+		permalink: document.GetElementByID("permalink").(*dom.HTMLAnchorElement),
+		issue:     document.GetElementByID("issue").(*dom.HTMLAnchorElement),
 	}
-	c.input.AddEventListener("input", false, func(dom.Event) { c.OnInput() })
-	c.OnInput()
+	c.SetInitialInput()
+	c.Update()
+	c.input.AddEventListener("input", false, func(dom.Event) {
+		deleteQuery()
+		c.Update()
+	})
+	c.permalink.AddEventListener("click", false, func(e dom.Event) {
+		me := e.(*dom.MouseEvent)
+		if me.CtrlKey || me.AltKey || me.MetaKey || me.ShiftKey {
+			// Only override normal clicks.
+			return
+		}
+		setQuery(c.input.Value)
+		e.PreventDefault()
+	})
 }
 
 type context struct {
-	input  *dom.HTMLInputElement
-	output *dom.HTMLDivElement
-	issue  *dom.HTMLAnchorElement
+	input     *dom.HTMLInputElement
+	output    *dom.HTMLDivElement
+	permalink *dom.HTMLAnchorElement
+	issue     *dom.HTMLAnchorElement
 }
 
-func (c context) OnInput() {
+// SetInitialInput sets initial input value.
+func (c context) SetInitialInput() {
+	if c.input.Value != "" {
+		// If the user has managed to already type some input, don't steamroll over it.
+		return
+	}
+	query, _ := url.ParseQuery(strings.TrimPrefix(dom.GetWindow().Location().Search, "?"))
+	q, ok := query["q"]
+	if !ok {
+		// TODO: Random initial example.
+		c.input.Value = "var x int"
+		c.input.Focus()
+		return
+	}
+	c.input.Value = q[0]
+	c.input.Focus()
+}
+
+// Update updates the output, permalink anchor href,
+// and issue anchor href, based on current input.
+func (c context) Update() {
+	c.updateOutput()
+	c.updatePermalink()
+	c.updateIssue()
+}
+
+func (c context) updateOutput() {
 	out, err := decl.GoToEnglish(c.input.Value)
 	if err != nil {
 		c.output.SetTextContent("error: " + err.Error())
-		c.updateIssueHref()
 		return
 	}
 	c.output.SetTextContent(out)
-	c.updateIssueHref()
 }
 
-func (c context) updateIssueHref() {
+func (c context) updatePermalink() {
+	v := url.Values{}
+	v.Set("q", c.input.Value)
+	url := url.URL{RawQuery: v.Encode()}
+	c.permalink.Href = url.String()
+}
+
+func (c context) updateIssue() {
 	v := url.Values{}
 	v.Set("title", fmt.Sprintf("decl: Unexpected handling of %q.", c.input.Value))
 	v.Set("body", fmt.Sprintf(`### What did you do?
@@ -73,10 +120,36 @@ I expected to see ...
 `+"```"+`
 `, c.input.Value, c.output.TextContent()))
 	url := url.URL{
-		Scheme:   "https",
-		Host:     "github.com",
-		Path:     "/shurcooL/godecl/issues/new",
+		Scheme: "https", Host: "github.com", Path: "/shurcooL/godecl/issues/new",
 		RawQuery: v.Encode(),
 	}
 	c.issue.Href = url.String()
+}
+
+// setQuery sets q in the window URL query to value.
+func setQuery(value string) {
+	url, err := url.Parse(dom.GetWindow().Location().Href)
+	if err != nil {
+		// We don't expect this can ever happen, so treat it as an internal error if it does.
+		panic(fmt.Errorf("internal error: parsing window.location.href as URL failed: %v", err))
+	}
+	query := url.Query()
+	query.Set("q", value)
+	url.RawQuery = query.Encode()
+	// TODO: dom.GetWindow().History().ReplaceState(...), blocked on https://github.com/dominikh/go-js-dom/issues/41.
+	js.Global.Get("window").Get("history").Call("replaceState", nil, nil, url.String())
+}
+
+// deleteQuery deletes q in the window URL query.
+func deleteQuery() {
+	url, err := url.Parse(dom.GetWindow().Location().Href)
+	if err != nil {
+		// We don't expect this can ever happen, so treat it as an internal error if it does.
+		panic(fmt.Errorf("internal error: parsing window.location.href as URL failed: %v", err))
+	}
+	query := url.Query()
+	query.Del("q")
+	url.RawQuery = query.Encode()
+	// TODO: dom.GetWindow().History().ReplaceState(...), blocked on https://github.com/dominikh/go-js-dom/issues/41.
+	js.Global.Get("window").Get("history").Call("replaceState", nil, nil, url.String())
 }

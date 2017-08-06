@@ -12,14 +12,17 @@ body {
 	width: 800px;
 }
 #output {
-	padding-top: 24px;
+	margin-top: 24px;
 	white-space: pre;
 }
-
-footer {
-	margin-top: 100px;
+div.permalink {
+	margin-top: 12px;
+	font-size: 75%;
 }
-div.unexpected {
+div.outputAndPermalink {
+	height: 160px;
+}
+div.issue {
 	color: #aaa;
 	text-align: right;
 }
@@ -30,15 +33,16 @@ div.unexpected {
 
 		<p>Go syntax → English</p>
 
-		<!-- TODO: Random initial example. -->
-		<input id="input" autofocus value="var x int"></input>
+		<input id="input"></input>
 
-		<div id="output">Loading...</div>
+		<div class="outputAndPermalink">
+			<div id="output">Loading...</div>
 
-		<!-- TODO: A "share this page" link. -->
+			<div class="permalink"><a id="permalink">permalink</a></div>
+		</div>
 
 		<footer>
-			<div class="unexpected">Unexpected output? Help out by <a id="issue" href="https://github.com/shurcooL/godecl/issues/new?title=decl:%20">reporting an issue</a>!</div>
+			<div class="issue">Unexpected output? Help out by <a id="issue" href="https://github.com/shurcooL/godecl/issues/new?title=decl:%20">reporting an issue</a>!</div>
 		</footer>
 
 		<script type="text/javascript" src="godecl.js"></script>
