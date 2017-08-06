@@ -9,6 +9,7 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/gopherjs/gopherjs/js"
@@ -27,6 +28,7 @@ where the DOM is not available. You'll need to run it inside a browser.`)
 	c := context{
 		input:  document.GetElementByID("input").(*dom.HTMLInputElement),
 		output: document.GetElementByID("output").(*dom.HTMLDivElement),
+		issue:  document.GetElementByID("issue").(*dom.HTMLAnchorElement),
 	}
 	c.input.AddEventListener("input", false, func(dom.Event) { c.OnInput() })
 	c.OnInput()
@@ -35,13 +37,46 @@ where the DOM is not available. You'll need to run it inside a browser.`)
 type context struct {
 	input  *dom.HTMLInputElement
 	output *dom.HTMLDivElement
+	issue  *dom.HTMLAnchorElement
 }
 
 func (c context) OnInput() {
 	out, err := decl.GoToEnglish(c.input.Value)
 	if err != nil {
 		c.output.SetTextContent("error: " + err.Error())
+		c.updateIssueHref()
 		return
 	}
 	c.output.SetTextContent(out)
+	c.updateIssueHref()
+}
+
+func (c context) updateIssueHref() {
+	v := url.Values{}
+	v.Set("title", fmt.Sprintf("decl: Unexpected handling of %q.", c.input.Value))
+	v.Set("body", fmt.Sprintf(`### What did you do?
+
+I typed the following input at godecl.org:
+
+`+"```Go"+`
+%v
+`+"```"+`
+
+### What did you expect to see?
+
+I expected to see ...
+
+### What did you see instead?
+
+`+"```"+`
+%v
+`+"```"+`
+`, c.input.Value, c.output.TextContent()))
+	url := url.URL{
+		Scheme:   "https",
+		Host:     "github.com",
+		Path:     "/shurcooL/godecl/issues/new",
+		RawQuery: v.Encode(),
+	}
+	c.issue.Href = url.String()
 }

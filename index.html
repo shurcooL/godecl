@@ -15,6 +15,14 @@ body {
 	padding-top: 24px;
 	white-space: pre;
 }
+
+footer {
+	margin-top: 100px;
+}
+div.unexpected {
+	color: #aaa;
+	text-align: right;
+}
 		</style>
 	</head>
 	<body><div style="max-width: 800px; margin: 0 auto 100px auto;">
@@ -28,7 +36,10 @@ body {
 		<div id="output">Loading...</div>
 
 		<!-- TODO: A "share this page" link. -->
-		<!-- TODO: A "submit an issue" link. -->
+
+		<footer>
+			<div class="unexpected">Unexpected output? Help out by <a id="issue" href="https://github.com/shurcooL/godecl/issues/new?title=decl:%20">reporting an issue</a>!</div>
+		</footer>
 
 		<script type="text/javascript" src="godecl.js"></script>
 	</div></body>
