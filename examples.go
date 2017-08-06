@@ -2,6 +2,7 @@ package main
 
 // examples is a list of example input values. On page load,
 // one of these is randomly chosen to display to the user.
+// These should be gofmted, to keep the examples nicer.
 var examples = []string{
 	"var x *[]map[int][2]string",
 	"var x func() *[5]*func() rune",
