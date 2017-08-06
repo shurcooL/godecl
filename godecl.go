@@ -9,14 +9,20 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gopherjs/gopherjs/js"
 	"github.com/shurcooL/godecl/decl"
 	"honnef.co/go/js/dom"
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func main() {
 	if js.Global == nil || js.Global.Get("document") == js.Undefined {
@@ -47,6 +53,26 @@ where the DOM is not available. You'll need to run it inside a browser.`)
 		setQuery(c.input.Value)
 		e.PreventDefault()
 	})
+	document.GetElementByID("random").AddEventListener("click", false, func(e dom.Event) {
+		me := e.(*dom.MouseEvent)
+		if me.CtrlKey || me.AltKey || me.MetaKey || me.ShiftKey {
+			// Only override normal clicks.
+			return
+		}
+		deleteQuery()
+		// Pick a random example (but avoid picking same as current input).
+		for {
+			new := examples[rand.Intn(len(examples))]
+			if new == c.input.Value {
+
+				continue
+			}
+			c.input.Value = new
+			break
+		}
+		c.Update()
+		e.PreventDefault()
+	})
 }
 
 type context struct {
@@ -65,8 +91,8 @@ func (c context) SetInitialInput() {
 	query, _ := url.ParseQuery(strings.TrimPrefix(dom.GetWindow().Location().Search, "?"))
 	q, ok := query["q"]
 	if !ok {
-		// TODO: Random initial example.
-		c.input.Value = "var x int"
+		// Random initial example.
+		c.input.Value = examples[rand.Intn(len(examples))]
 		c.input.Focus()
 		return
 	}
