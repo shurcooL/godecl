@@ -65,8 +65,12 @@ func TestGoToEnglish(t *testing.T) {
 			"pointer to slice of map of int to string",
 		},
 		{
+			"var x *[]map[int][2]string",
+			"declare variable x as pointer to slice of map of int to 2-element array of string",
+		},
+		{
 			"**[][]*map[int32][][3]string",
-			"pointer to pointer to slice of slice of pointer to map of int32 to slice of array 3 of string",
+			"pointer to pointer to slice of slice of pointer to map of int32 to slice of 3-element array of string",
 		},
 		{
 			"func(string, bool) (int, error)",
@@ -78,7 +82,7 @@ func TestGoToEnglish(t *testing.T) {
 		},
 		{
 			"var x func() *[5]*func() rune",
-			"declare variable x as function returning pointer to array 5 of pointer to function returning rune",
+			"declare variable x as function returning pointer to 5-element array of pointer to function returning rune",
 		},
 
 		{

@@ -365,9 +365,8 @@ func writeExpr(buf *bytes.Buffer, x ast.Expr) {
 		if x.Len == nil {
 			buf.WriteString("slice of ")
 		} else {
-			buf.WriteString("array ")
 			writeExpr(buf, x.Len)
-			buf.WriteString(" of ")
+			buf.WriteString("-element array of ")
 		}
 		writeExpr(buf, x.Elt)
 
