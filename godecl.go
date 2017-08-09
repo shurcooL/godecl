@@ -108,6 +108,7 @@ func (c context) Update() {
 	c.updateIssue()
 }
 
+// updateOutput updates the output text based on current input.
 func (c context) updateOutput() {
 	out, err := decl.GoToEnglish(c.input.Value)
 	if err != nil {
@@ -117,6 +118,7 @@ func (c context) updateOutput() {
 	c.output.SetTextContent(out)
 }
 
+// updatePermalink updates the permalink anchor href based on current input.
 func (c context) updatePermalink() {
 	v := url.Values{}
 	v.Set("q", c.input.Value)
@@ -124,6 +126,7 @@ func (c context) updatePermalink() {
 	c.permalink.Href = url.String()
 }
 
+// updateIssue updates the "report an issue" anchor href based on current input.
 func (c context) updateIssue() {
 	v := url.Values{}
 	v.Set("title", fmt.Sprintf("decl: Unexpected handling of %q.", c.input.Value))

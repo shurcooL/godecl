@@ -408,6 +408,8 @@ func writeExpr(buf *bytes.Buffer, x ast.Expr) {
 	}
 }
 
+// writeSigExpr writes the (possibly simplified) English representation
+// for a function signature to buf.
 func writeSigExpr(buf *bytes.Buffer, sig *ast.FuncType) {
 	if sig.Params.NumFields() > 0 {
 		buf.WriteString("taking ")
@@ -422,6 +424,8 @@ func writeSigExpr(buf *bytes.Buffer, sig *ast.FuncType) {
 	}
 }
 
+// writeFieldList writes the (possibly simplified) English representation
+// for a field list to buf.
 func writeFieldList(buf *bytes.Buffer, fields *ast.FieldList, sep string, iface bool) {
 	for i, f := range fields.List {
 		if i > 0 {
