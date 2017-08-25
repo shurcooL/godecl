@@ -12,6 +12,7 @@ var examples = []string{
 	"var x func() *[5]*func() rune",
 	"var x, y int = 1, 2",
 	"var x = (2+5)/3.0 + 4",
+	"type T1 = T2",
 
 	// TODO: Add more fun and interesting example inputs.
 	//       See decl tests for inspiration.

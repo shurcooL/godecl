@@ -119,6 +119,15 @@ func TestGoToEnglish(t *testing.T) {
 			"func Foo(x int) string",
 			"function Foo taking x int and returning string",
 		},
+
+		{
+			"type T1 T2",
+			"declare type T1 as T2",
+		},
+		{
+			"type T1 = T2",
+			"declare type T1 as alias of T2",
+		},
 	}
 	for _, tc := range tests {
 		got, err := decl.GoToEnglish(tc.in)

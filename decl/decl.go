@@ -230,6 +230,9 @@ func writeSpec(buf *bytes.Buffer, x ast.Spec) {
 	case *ast.TypeSpec:
 		buf.WriteString(x.Name.Name)
 		buf.WriteString(" as ")
+		if x.Assign.IsValid() {
+			buf.WriteString("alias of ")
+		}
 		writeExpr(buf, x.Type)
 
 	case *ast.ImportSpec:
