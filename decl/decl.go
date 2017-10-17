@@ -345,7 +345,12 @@ func writeExpr(buf *bytes.Buffer, x ast.Expr) {
 		writeExpr(buf, x.X)
 
 	case *ast.UnaryExpr:
-		buf.WriteString(x.Op.String())
+		switch x.Op {
+		default:
+			buf.WriteString(x.Op.String())
+		case token.AND:
+			buf.WriteString("address of ")
+		}
 		writeExpr(buf, x.X)
 
 	case *ast.BinaryExpr:

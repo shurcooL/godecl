@@ -86,12 +86,21 @@ func TestGoToEnglish(t *testing.T) {
 		},
 
 		{
-			"i = 5",
-			"assign to i the value 5",
+			"a = 5",
+			"assign to a the value 5",
 		},
 		{
-			"i, j = 5, 6",
-			"assign to i and j the values 5 and 6",
+			"a, b = 5, 6",
+			"assign to a and b the values 5 and 6",
+		},
+
+		{
+			"&a",
+			"address of a",
+		},
+		{
+			"var x *int = &a",
+			"declare variable x as pointer to int with initial value address of a",
 		},
 
 		{
