@@ -4,6 +4,8 @@
 
 // A godecl experiment. Like cdecl, but for Go.
 //
+// https://godecl.org
+//
 // Inspired by @bradfitz at https://twitter.com/bradfitz/status/833048466456600576.
 package main
 

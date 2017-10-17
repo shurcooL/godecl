@@ -5,7 +5,9 @@ godecl
 
 A godecl experiment. Like cdecl, but for Go.
 
-Inspired by @bradfitz at https://twitter.com/bradfitz/status/833048466456600576.
+https://godecl.org
+
+Inspired by <a href="https://github.com/bradfitz" class="user-mention">@bradfitz</a> at https://twitter.com/bradfitz/status/833048466456600576.
 
 Installation
 ------------
