@@ -1,7 +1,7 @@
 godecl
 ======
 
-[![Build Status](https://travis-ci.org/shurcooL/godecl.svg?branch=master)](https://travis-ci.org/shurcooL/godecl) [![GoDoc](https://godoc.org/github.com/shurcooL/godecl?status.svg)](https://godoc.org/github.com/shurcooL/godecl)
+[![Go Reference](https://pkg.go.dev/badge/github.com/shurcooL/godecl.svg)](https://pkg.go.dev/github.com/shurcooL/godecl)
 
 A godecl experiment. Like cdecl, but for Go.
 
@@ -12,18 +12,18 @@ Inspired by <a href="https://github.com/bradfitz" class="user-mention">@bradfitz
 Installation
 ------------
 
-```bash
-go get -u github.com/shurcooL/godecl
+```sh
+go install github.com/shurcooL/godecl@latest
 ```
 
 Directories
 -----------
 
-| Path                                                      | Synopsis                                                                                            |
-|-----------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| [decl](https://godoc.org/github.com/shurcooL/godecl/decl) | Package decl implements functionality to convert fragments of Go code to an English representation. |
+| Path                                                       | Synopsis                                                                                            |
+|------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| [decl](https://pkg.go.dev/github.com/shurcooL/godecl/decl) | Package decl implements functionality to convert fragments of Go code to an English representation. |
 
 License
 -------
 
-[LICENSE](LICENSE).
+-	[BSD-style License](LICENSE)
