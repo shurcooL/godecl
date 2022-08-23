@@ -47,7 +47,10 @@ where the DOM is not available. You'll need to run it inside a browser.`)
 		c.Update()
 	})
 	c.permalink.AddEventListener("click", false, func(e dom.Event) {
-		me := e.(*dom.MouseEvent)
+		me, ok := e.(*dom.MouseEvent)
+		if !ok {
+			me = e.(*dom.PointerEvent).MouseEvent
+		}
 		if me.CtrlKey || me.AltKey || me.MetaKey || me.ShiftKey {
 			// Only override normal clicks.
 			return
@@ -56,7 +59,10 @@ where the DOM is not available. You'll need to run it inside a browser.`)
 		e.PreventDefault()
 	})
 	document.GetElementByID("random").AddEventListener("click", false, func(e dom.Event) {
-		me := e.(*dom.MouseEvent)
+		me, ok := e.(*dom.MouseEvent)
+		if !ok {
+			me = e.(*dom.PointerEvent).MouseEvent
+		}
 		if me.CtrlKey || me.AltKey || me.MetaKey || me.ShiftKey {
 			// Only override normal clicks.
 			return
